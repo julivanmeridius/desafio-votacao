@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: votacao-config
+  namespace: votacao
+data:
+  SERVER_PORT: "8080"
+  DB_HOST: "algum-endereco-rds-endpoint.amazonaws.com"
+  DB_PORT: "5432"
+  DB_NAME: "votacao"
+  HIBERNATE_DDL_AUTO: "none"
+  JPA_SHOW_SQL: "false"

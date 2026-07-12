@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: votacao-backend-service
+  namespace: votacao
+spec:
+  type: LoadBalancer
+  selector:
+    app: votacao-backend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
