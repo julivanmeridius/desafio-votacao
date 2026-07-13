@@ -3,7 +3,9 @@ package br.com.company.votacao.controller;
 import br.com.company.votacao.dto.PautaResponseDTO;
 import br.com.company.votacao.dto.SessaoVotacaoResponseDTO;
 import br.com.company.votacao.service.PautaService;
+import br.com.company.votacao.service.ResultadoService;
 import br.com.company.votacao.service.SessaoVotacaoService;
+import br.com.company.votacao.service.VotoService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -40,6 +42,12 @@ class PautaControllerTest {
 
     @MockitoBean
     private SessaoVotacaoService sessaoVotacaoService;
+
+    @MockitoBean
+    private VotoService votoService;
+
+    @MockitoBean
+    private ResultadoService resultadoService;
 
     @Test
     void criar_shouldReturn201WithPautaId_whenValidRequest() throws Exception {
