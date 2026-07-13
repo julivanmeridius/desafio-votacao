@@ -75,6 +75,7 @@ Desenvolvimento de um sistema de controle de votacao
   - Logs estruturados usando Micrometer registry prometheus para posterior monitoramento
 
 ## Decisões arquiteturais tomadas para o contexto
-01)  No meu entendimento o fato de termos um cache como Redis não faz muito sentido, pois o banco de dados
-     PostgreSQL com índices aguenta dezenas de milhares de leituras/segundo sem Redis.
-
+1)  No meu entendimento o fato de termos um cache como Redis não faz muito sentido, pois o banco de dados
+PostgreSQL com índices aguenta dezenas de milhares de leituras/segundo sem Redis.
+2) Versionamento da API sera feito via URL.
+3) Uso de record para imutabilidade dos dados, eliminação de boilerplate
