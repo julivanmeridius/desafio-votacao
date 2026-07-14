@@ -14,8 +14,10 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 
+import static br.com.company.votacao.constants.VotacaoConstants.PAUTA_NAO_ENCONTRADA;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -24,14 +26,9 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @ExtendWith(MockitoExtension.class)
 class ResultadoServiceTest {
 
-    @Mock
-    private PautaRepository pautaRepository;
-
-    @Mock
-    private SessaoVotacaoRepository sessaoVotacaoRepository;
-
-    @Mock
-    private VotoRepository votoRepository;
+    @Mock private PautaRepository pautaRepository;
+    @Mock private SessaoVotacaoRepository sessaoVotacaoRepository;
+    @Mock private VotoRepository votoRepository;
 
     @InjectMocks
     private ResultadoService resultadoService;
@@ -39,10 +36,12 @@ class ResultadoServiceTest {
     @Test
     void obter_shouldReturnResultadoWithStatusAberta_whenSessaoIsActive() {
         var pautaId = 1L;
+        var projection = mock(VotoRepository.ResultadoVotacaoProjection.class);
 
         when(pautaRepository.existsById(pautaId)).thenReturn(true);
-        when(votoRepository.countByPautaIdAndVoto(pautaId, "Sim")).thenReturn(3L);
-        when(votoRepository.countByPautaIdAndVoto(pautaId, "Não")).thenReturn(1L);
+        when(votoRepository.countResultadoByPautaId(pautaId)).thenReturn(projection);
+        when(projection.getSimCount()).thenReturn(3L);
+        when(projection.getNaoCount()).thenReturn(1L);
         when(sessaoVotacaoRepository.findActivaByPautaId(pautaId)).thenReturn(Optional.of(new SessaoVotacao()));
 
         var result = resultadoService.obter(pautaId);
@@ -53,18 +52,19 @@ class ResultadoServiceTest {
         assertThat(result.status()).isEqualTo(StatusSessao.ABERTA);
 
         verify(pautaRepository).existsById(pautaId);
-        verify(votoRepository).countByPautaIdAndVoto(pautaId, "Sim");
-        verify(votoRepository).countByPautaIdAndVoto(pautaId, "Não");
+        verify(votoRepository).countResultadoByPautaId(pautaId);
         verify(sessaoVotacaoRepository).findActivaByPautaId(pautaId);
     }
 
     @Test
     void obter_shouldReturnResultadoWithStatusEncerrada_whenNoActiveSessao() {
         var pautaId = 1L;
+        var projection = mock(VotoRepository.ResultadoVotacaoProjection.class);
 
         when(pautaRepository.existsById(pautaId)).thenReturn(true);
-        when(votoRepository.countByPautaIdAndVoto(pautaId, "Sim")).thenReturn(0L);
-        when(votoRepository.countByPautaIdAndVoto(pautaId, "Não")).thenReturn(2L);
+        when(votoRepository.countResultadoByPautaId(pautaId)).thenReturn(projection);
+        when(projection.getSimCount()).thenReturn(0L);
+        when(projection.getNaoCount()).thenReturn(2L);
         when(sessaoVotacaoRepository.findActivaByPautaId(pautaId)).thenReturn(Optional.empty());
 
         var result = resultadoService.obter(pautaId);
@@ -78,10 +78,12 @@ class ResultadoServiceTest {
     @Test
     void obter_shouldReturnZeroCountsAndStatusEncerrada_whenNoVotesAndNoSession() {
         var pautaId = 1L;
+        var projection = mock(VotoRepository.ResultadoVotacaoProjection.class);
 
         when(pautaRepository.existsById(pautaId)).thenReturn(true);
-        when(votoRepository.countByPautaIdAndVoto(pautaId, "Sim")).thenReturn(0L);
-        when(votoRepository.countByPautaIdAndVoto(pautaId, "Não")).thenReturn(0L);
+        when(votoRepository.countResultadoByPautaId(pautaId)).thenReturn(projection);
+        when(projection.getSimCount()).thenReturn(0L);
+        when(projection.getNaoCount()).thenReturn(0L);
         when(sessaoVotacaoRepository.findActivaByPautaId(pautaId)).thenReturn(Optional.empty());
 
         var result = resultadoService.obter(pautaId);
@@ -103,7 +105,7 @@ class ResultadoServiceTest {
                 .satisfies(ex -> {
                     var rse = (ResponseStatusException) ex;
                     assertThat(rse.getStatusCode()).isEqualTo(NOT_FOUND);
-                    assertThat(rse.getReason()).isEqualTo("Pauta não encontrada");
+                    assertThat(rse.getReason()).isEqualTo(PAUTA_NAO_ENCONTRADA);
                 });
 
         verify(pautaRepository).existsById(pautaId);

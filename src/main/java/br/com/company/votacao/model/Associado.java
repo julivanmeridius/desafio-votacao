@@ -7,21 +7,27 @@ import org.hibernate.annotations.ColumnDefault;
 
 import java.time.OffsetDateTime;
 
+import static br.com.company.votacao.constants.VotacaoConstants.COLUMN_CRIADO_EM;
+import static br.com.company.votacao.constants.VotacaoConstants.COLUMN_ID;
+import static br.com.company.votacao.constants.VotacaoConstants.COLUMN_NOME;
+import static br.com.company.votacao.constants.VotacaoConstants.DEFAULT_NOW;
+import static br.com.company.votacao.constants.VotacaoConstants.TABLE_ASSOCIADO;
+
 @Getter
 @Setter
 @Entity
-@Table(name = "associado")
+@Table(name = TABLE_ASSOCIADO)
 public class Associado {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false)
+    @Column(name = COLUMN_ID, nullable = false)
     private Long id;
 
-    @Column(name = "nome", nullable = false, length = 200)
+    @Column(name = COLUMN_NOME, nullable = false, length = 200)
     private String nome;
 
-    @ColumnDefault("now()")
-    @Column(name = "criado_em", nullable = false)
+    @ColumnDefault(DEFAULT_NOW)
+    @Column(name = COLUMN_CRIADO_EM, nullable = false)
     private OffsetDateTime criadoEm;
 
 }

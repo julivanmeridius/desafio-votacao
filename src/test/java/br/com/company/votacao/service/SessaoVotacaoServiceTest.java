@@ -9,16 +9,23 @@ import br.com.company.votacao.repository.PautaRepository;
 import br.com.company.votacao.repository.SessaoVotacaoRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -27,14 +34,10 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @ExtendWith(MockitoExtension.class)
 class SessaoVotacaoServiceTest {
 
-    @Mock
-    private SessaoVotacaoRepository sessaoVotacaoRepository;
-
-    @Mock
-    private PautaRepository pautaRepository;
-
-    @Mock
-    private SessaoVotacaoMapper sessaoVotacaoMapper;
+    @Mock private SessaoVotacaoRepository sessaoVotacaoRepository;
+    @Mock private PautaRepository pautaRepository;
+    @Mock private SessaoVotacaoMapper sessaoVotacaoMapper;
+    @Mock private ResultadoPublicacaoService resultadoPublicacaoService;
 
     @InjectMocks
     private SessaoVotacaoService sessaoVotacaoService;
@@ -82,14 +85,80 @@ class SessaoVotacaoServiceTest {
         assertThatThrownBy(() -> sessaoVotacaoService.abrir(pautaId, request))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(exception -> {
-                    var responseStatusException = (ResponseStatusException) exception;
-                    assertThat(responseStatusException.getStatusCode()).isEqualTo(NOT_FOUND);
-                    assertThat(responseStatusException.getReason()).isEqualTo("Pauta não encontrada");
+                    var rse = (ResponseStatusException) exception;
+                    assertThat(rse.getStatusCode()).isEqualTo(NOT_FOUND);
+                    assertThat(rse.getReason()).isEqualTo("Pauta não encontrada");
                 });
 
         verify(pautaRepository).findById(pautaId);
-        verifyNoInteractions(sessaoVotacaoRepository);
-        verifyNoInteractions(sessaoVotacaoMapper);
+        verifyNoInteractions(sessaoVotacaoRepository, sessaoVotacaoMapper, resultadoPublicacaoService);
+    }
+
+    @Test
+    void encerrarSessoesExpiradas_shouldDoNothing_whenNoExpiredSessoes() {
+        when(sessaoVotacaoRepository.findSessoesExpiradasParaEncerrar()).thenReturn(List.of());
+
+        sessaoVotacaoService.encerrarSessoesExpiradas();
+
+        verify(sessaoVotacaoRepository, never()).saveAll(any());
+        verifyNoInteractions(resultadoPublicacaoService);
+    }
+
+    @Test
+    void encerrarSessoesExpiradas_shouldEncerrarAndPublishAfterCommit_whenExpiredSessaoExists() {
+        var pauta = new Pauta();
+        pauta.setId(1L);
+
+        var sessao = new SessaoVotacao();
+        sessao.setPauta(pauta);
+
+        when(sessaoVotacaoRepository.findSessoesExpiradasParaEncerrar()).thenReturn(List.of(sessao));
+
+        TransactionSynchronization sync;
+        try (var mocked = mockStatic(TransactionSynchronizationManager.class)) {
+            sessaoVotacaoService.encerrarSessoesExpiradas();
+
+            var syncCaptor = ArgumentCaptor.forClass(TransactionSynchronization.class);
+            mocked.verify(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()));
+            sync = syncCaptor.getValue();
+        }
+
+        assertThat(sessao.getEncerradaEm()).isNotNull();
+        verify(sessaoVotacaoRepository).saveAll(List.of(sessao));
+
+        sync.afterCommit();
+        verify(resultadoPublicacaoService).publicarResultadoFinal(1L);
+    }
+
+    @Test
+    void encerrarSessoesExpiradas_shouldEncerrarMultipleSessoes_whenMultipleExpired() {
+        var pauta1 = new Pauta();
+        pauta1.setId(1L);
+        var pauta2 = new Pauta();
+        pauta2.setId(2L);
+
+        var sessao1 = new SessaoVotacao();
+        sessao1.setPauta(pauta1);
+        var sessao2 = new SessaoVotacao();
+        sessao2.setPauta(pauta2);
+
+        var sessoesExpiradas = List.of(sessao1, sessao2);
+        when(sessaoVotacaoRepository.findSessoesExpiradasParaEncerrar()).thenReturn(sessoesExpiradas);
+
+        TransactionSynchronization sync;
+        try (var mocked = mockStatic(TransactionSynchronizationManager.class)) {
+            sessaoVotacaoService.encerrarSessoesExpiradas();
+
+            var syncCaptor = ArgumentCaptor.forClass(TransactionSynchronization.class);
+            mocked.verify(() -> TransactionSynchronizationManager.registerSynchronization(syncCaptor.capture()));
+            sync = syncCaptor.getValue();
+        }
+
+        assertThat(sessao1.getEncerradaEm()).isNotNull();
+        assertThat(sessao2.getEncerradaEm()).isNotNull();
+
+        sync.afterCommit();
+        verify(resultadoPublicacaoService).publicarResultadoFinal(1L);
+        verify(resultadoPublicacaoService).publicarResultadoFinal(2L);
     }
 }
-

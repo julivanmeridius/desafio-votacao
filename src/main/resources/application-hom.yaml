@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT}
   tomcat:
     threads:
       max: 200
@@ -24,7 +24,7 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
-      environment: ${ENVIRONMENT:local}
+      environment: ${ENVIRONMENT}
 
 logging:
   structured:
@@ -58,9 +58,9 @@ spring:
 
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:votacao}
-    username: ${DB_USR:postgres}
-    password: ${DB_PASS:masterkey}
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USR}
+    password: ${DB_PASS}
 
   flyway:
     enabled: true
@@ -71,13 +71,13 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: ${HIBERNATE_DDL_AUTO:validate}
-    show-sql: ${JPA_SHOW_SQL:false}
+      ddl-auto: ${HIBERNATE_DDL_AUTO}
+    show-sql: ${JPA_SHOW_SQL}
     open-in-view: false
 
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    votacao-topic: ${KAFKA_VOTACAO_TOPIC:votacao-resultado}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    votacao-topic: ${KAFKA_VOTACAO_TOPIC}
     producer:
       linger-ms: 10
       batch-size: 32768
@@ -91,4 +91,4 @@ spring:
 
 app:
   sessao-votacao:
-    encerramento-delay-ms: ${SESSAO_VOTACAO_ENCERRAMENTO_DELAY_MS:5000}
+    encerramento-delay-ms: ${SESSAO_VOTACAO_ENCERRAMENTO_DELAY_MS}

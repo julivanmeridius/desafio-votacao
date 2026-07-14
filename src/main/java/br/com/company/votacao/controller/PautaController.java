@@ -1,14 +1,6 @@
 package br.com.company.votacao.controller;
 
-import br.com.company.votacao.mapper.SessaoVotacaoMapper;
-
-import br.com.company.votacao.dto.PautaRequestDTO;
-import br.com.company.votacao.dto.PautaResponseDTO;
-import br.com.company.votacao.dto.SessaoVotacaoRequestDTO;
-import br.com.company.votacao.dto.SessaoVotacaoResponseDTO;
-import br.com.company.votacao.dto.ResultadoResponseDTO;
-import br.com.company.votacao.dto.VotoRequestDTO;
-import br.com.company.votacao.dto.VotoResponseDTO;
+import br.com.company.votacao.dto.*;
 import br.com.company.votacao.service.PautaService;
 import br.com.company.votacao.service.ResultadoService;
 import br.com.company.votacao.service.SessaoVotacaoService;
@@ -20,10 +12,21 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import static br.com.company.votacao.constants.VotacaoConstants.API_PAUTAS_BASE_PATH;
+import static br.com.company.votacao.constants.VotacaoConstants.API_RESULTADO_PATH;
+import static br.com.company.votacao.constants.VotacaoConstants.API_SESSOES_PATH;
+import static br.com.company.votacao.constants.VotacaoConstants.API_VOTOS_PATH;
+import static br.com.company.votacao.constants.VotacaoConstants.OP_ABRIR_SESSAO;
+import static br.com.company.votacao.constants.VotacaoConstants.OP_CRIAR_PAUTA;
+import static br.com.company.votacao.constants.VotacaoConstants.OP_OBTER_RESULTADO;
+import static br.com.company.votacao.constants.VotacaoConstants.OP_REGISTRAR_VOTO;
+import static br.com.company.votacao.constants.VotacaoConstants.TAG_PAUTAS_DESCRIPTION;
+import static br.com.company.votacao.constants.VotacaoConstants.TAG_PAUTAS_NAME;
+
 @RestController
-@RequestMapping("/v1/pautas")
+@RequestMapping(API_PAUTAS_BASE_PATH)
 @RequiredArgsConstructor
-@Tag(name = "Pautas", description = "Gerenciamento de pautas")
+@Tag(name = TAG_PAUTAS_NAME, description = TAG_PAUTAS_DESCRIPTION)
 public class PautaController {
 
     private final PautaService pautaService;
@@ -33,14 +36,14 @@ public class PautaController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Criar nova pauta para votação")
+    @Operation(summary = OP_CRIAR_PAUTA)
     public PautaResponseDTO criar(@Valid @RequestBody PautaRequestDTO dto) {
         return pautaService.criar(dto);
     }
 
-    @PostMapping("/{pautaId}/sessoes")
+    @PostMapping(API_SESSOES_PATH)
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Realizar a abertura de sessão de votação de uma pauta")
+    @Operation(summary = OP_ABRIR_SESSAO)
     public SessaoVotacaoResponseDTO abrirSessao(
             @PathVariable Long pautaId,
             @Valid @RequestBody(required = false) SessaoVotacaoRequestDTO dto
@@ -48,9 +51,9 @@ public class PautaController {
         return sessaoVotacaoService.abrir(pautaId, dto);
     }
 
-    @PostMapping("/{pautaId}/votos")
+    @PostMapping(API_VOTOS_PATH)
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Registrar voto de um associado em uma pauta")
+    @Operation(summary = OP_REGISTRAR_VOTO)
     public VotoResponseDTO votar(
             @PathVariable Long pautaId,
             @Valid @RequestBody VotoRequestDTO dto
@@ -58,8 +61,8 @@ public class PautaController {
         return votoService.votar(pautaId, dto);
     }
 
-    @GetMapping("/{pautaId}/resultado")
-    @Operation(summary = "Obter resultado da votação de uma pauta")
+    @GetMapping(API_RESULTADO_PATH)
+    @Operation(summary = OP_OBTER_RESULTADO)
     public ResultadoResponseDTO resultado(@PathVariable Long pautaId) {
         return resultadoService.obter(pautaId);
     }

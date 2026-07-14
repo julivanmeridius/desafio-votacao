@@ -5,6 +5,8 @@ import io.swagger.v3.oas.models.info.Info;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import static br.com.company.votacao.constants.VotacaoConstants.*;
+
 @Configuration
 public class OpenApiConfig {
 
@@ -12,8 +14,8 @@ public class OpenApiConfig {
     public OpenAPI votacaoOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Votacao API")
-                        .description("REST API para gerencianento de agendas voting agendas, voting sessions, associates, and votes.")
-                        .version("1.0.0"));
+                        .title(OPEN_API_TITLE)
+                        .description(OPEN_API_DESCRIPTION)
+                        .version(OPEN_API_VERSION));
     }
 }

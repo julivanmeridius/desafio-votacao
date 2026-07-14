@@ -5,8 +5,12 @@ metadata:
   namespace: votacao
 data:
   SERVER_PORT: "8080"
+  ENVIRONMENT: "prod"
   DB_HOST: "algum-endereco-rds-endpoint.amazonaws.com"
   DB_PORT: "5432"
   DB_NAME: "votacao"
   HIBERNATE_DDL_AUTO: "none"
   JPA_SHOW_SQL: "false"
+  KAFKA_BOOTSTRAP_SERVERS: "algum-endereco-msk-endpoint.amazonaws.com:9092"
+  KAFKA_VOTACAO_TOPIC: "votacao-resultado"
+  SESSAO_VOTACAO_ENCERRAMENTO_DELAY_MS: "5000"

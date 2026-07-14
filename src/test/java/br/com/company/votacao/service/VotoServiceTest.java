@@ -26,9 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import static org.springframework.http.HttpStatus.CONFLICT;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
+import static org.springframework.http.HttpStatus.*;
 
 @ExtendWith(MockitoExtension.class)
 class VotoServiceTest {
@@ -127,7 +125,7 @@ class VotoServiceTest {
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> {
                     var rse = (ResponseStatusException) ex;
-                    assertThat(rse.getStatusCode()).isEqualTo(UNPROCESSABLE_ENTITY);
+                    assertThat(rse.getStatusCode()).isEqualTo(UNPROCESSABLE_CONTENT);
                     assertThat(rse.getReason()).isEqualTo("Nenhuma sessão ativa encontrada para esta pauta");
                 });
 

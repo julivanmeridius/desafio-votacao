@@ -5,8 +5,11 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 
+import static br.com.company.votacao.constants.VotacaoConstants.VOTO_REGEX;
+import static br.com.company.votacao.constants.VotacaoConstants.VOTO_VALIDATION_MESSAGE;
+
 public record VotoRequestDTO(
         @NotNull @Positive Long associadoId,
-        @NotBlank @Pattern(regexp = "Sim|Não", message = "Voto deve ser 'Sim' ou 'Não'") String voto
+        @NotBlank @Pattern(regexp = VOTO_REGEX, message = VOTO_VALIDATION_MESSAGE) String voto
 ) {
 }

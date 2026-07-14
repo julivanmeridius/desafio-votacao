@@ -1,81 +1,237 @@
 # desafio-votacao
-Desenvolvimento de um sistema de controle de votacao
 
-# API documentations local endpoints
-### http://localhost:8080/swagger-ui.html
-### http://localhost:8080/v3/api-docs
-
-# Decisoes arquiteturais tomadas para o contexto 
-
-## Modelagem e Regras mantidas no PostgreSQL ( Fonte da Verdade )
+Sistema REST de controle de votação construído com Spring Boot 4.1 e Java 21.
 
 ---
-## Backend ( Spring boot + Java 21)
-### Estrutura
-- **Controller (REST):** valida formato e chama serviços.
-- **Service:** regras de negócio (abrir sessão, receber voto, obter resultado).
-- **Repository (JPA):** persistência.
-- **DTOs:** separa payloads da entidade JPA.
+
+## Pré-requisitos
+
+| Ferramenta | Versão mínima |
+|---|---|
+| Java (JDK) | 21 |
+| Maven | 3.9 |
+| Docker Desktop | 4.x |
+
+---
+
+## Início Rápido (desenvolvimento local)
+
+A aplicação e a infraestrutura rodam em ambientes separados intencionalmente — o mesmo modelo usado em nuvem (app no cluster, banco no RDS, Kafka no MSK).
+
+### 1. Subir a infraestrutura (banco + mensageria)
+
+```bash
+docker compose up -d
+```
+
+Aguarde os contêineres ficarem saudáveis:
+
+```bash
+docker compose ps
+```
+
+Saída esperada:
+
+```
+NAME                STATUS
+votacao-postgres    Up (healthy)
+votacao-kafka       Up
+```
+
+### 2. Executar a aplicação
+
+**Opção A — Maven (recomendado para desenvolvimento):**
+
+```bash
+mvn spring-boot:run
+```
+
+**Opção B — JAR:**
+
+```bash
+mvn clean package -DskipTests
+java -jar target/votacao-*.jar
+```
+
+**Opção C — Docker (simula o ambiente de nuvem localmente):**
+
+```bash
+docker build -t votacao-backend .
+
+docker run --rm \
+  -p 8080:8080 \
+  -e DB_HOST=host.docker.internal \
+  -e KAFKA_BOOTSTRAP_SERVERS=host.docker.internal:9092 \
+  votacao-backend
+```
+
+> `host.docker.internal` resolve para o host a partir de dentro do contêiner (disponível no Docker Desktop para Mac e Windows; no Linux use `--add-host=host.docker.internal:host-gateway`).
+
+### 3. Verificar a aplicação
+
+| Recurso | URL |
+|---|---|
+| Swagger UI | http://localhost:8080/swagger-ui.html |
+| OpenAPI JSON | http://localhost:8080/v3/api-docs |
+| Health | http://localhost:8080/actuator/health |
+| Metrics (Prometheus) | http://localhost:8080/actuator/prometheus |
+
+### 4. Parar a infraestrutura
+
+```bash
+docker compose down    
+docker compose down -v
+```
+
+---
+
+## Variáveis de ambiente
+
+Todos os valores abaixo têm **default local** definido em `application.yaml`. Só precisam ser sobrescritos em ambientes externos.
+
+| Variável | Default local | Descrição |
+|---|---|---|
+| `SERVER_PORT` | `8080` | Porta HTTP da aplicação |
+| `ENVIRONMENT` | `local` | Rótulo do ambiente (usado em métricas) |
+| `DB_HOST` | `localhost` | Host do PostgreSQL |
+| `DB_PORT` | `5432` | Porta do PostgreSQL |
+| `DB_NAME` | `votacao` | Nome do banco de dados |
+| `DB_USR` | `postgres` | Usuário do banco |
+| `DB_PASS` | `masterkey` | Senha do banco |
+| `HIBERNATE_DDL_AUTO` | `validate` | DDL do Hibernate (`validate` / `none`) |
+| `JPA_SHOW_SQL` | `false` | Loga SQLs geradas |
+| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Endereço(s) do Kafka |
+| `KAFKA_VOTACAO_TOPIC` | `votacao-resultado` | Tópico de resultado de votação |
+| `SESSAO_VOTACAO_ENCERRAMENTO_DELAY_MS` | `5000` | Intervalo do scheduler de encerramento (ms) |
+
+---
+
+## Testes
+
+```bash
+mvn test
+mvn test -pl . -Dtest=NomeTest 
+```
+
+Cobertura de testes: 47 testes unitários (serviços, mappers, controladores e Kafka publisher).
+
+---
+
+## Deploy em nuvem (Kubernetes)
+
+Os manifestos estão em `k8s/`. O modelo de isolamento é:
+
+```
+[ EKS / ECS ]         [ RDS PostgreSQL ]     [ MSK Kafka ]
+  votacao-backend  →  (endpoint externo)  →  (endpoint externo)
+```
+
+### Sequência de aplicação
+
+```bash
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/secret.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+```
+
+### Antes de aplicar, edite:
+
+**`k8s/configmap.yaml`** — substitua os placeholders pelos endpoints reais:
+- `DB_HOST` → endpoint do RDS
+- `KAFKA_BOOTSTRAP_SERVERS` → endpoint do MSK
+
+**`k8s/secret.yaml`** — substitua usuário e senha do banco por valores reais (ou use AWS Secrets Manager / External Secrets Operator).
+
+**`k8s/deployment.yaml`** — substitua `your-aws-account-id` pelo ID real da conta AWS:
+```yaml
+image: <account-id>.dkr.ecr.<region>.amazonaws.com/votacao-backend:latest
+```
+
+### Build e push da imagem
+
+```bash
+# autenticar no ECR
+aws ecr get-login-password --region us-east-1 \
+  | docker login --username AWS --password-stdin \
+    <account-id>.dkr.ecr.us-east-1.amazonaws.com
+
+# build e push
+docker build -t votacao-backend .
+docker tag votacao-backend:latest \
+  <account-id>.dkr.ecr.us-east-1.amazonaws.com/votacao-backend:latest
+docker push \
+  <account-id>.dkr.ecr.us-east-1.amazonaws.com/votacao-backend:latest
+```
+
 ---
 
 ## API REST
 
-### 01) Cadastrar nova pauta
-- **POST** `/pautas`
-- body: `titulo`, `descricao`
-- retorna: `pautaId`
+**Base path:** `/v1/pautas`
 
-### 02) Abrir sessão de votação
-- **POST** `/pautas/{pautaId}/sessoes`
-- body opcional: `duracaoSegundos` (default = 60)
-- retorna: `sessaoId`, `tempoAbertura`, `fechaAbertura`
+| # | Método | Endpoint | Descrição |
+|---|---|---|---|
+| 1 | `POST` | `/v1/pautas` | Cadastrar nova pauta |
+| 2 | `POST` | `/v1/pautas/{pautaId}/sessoes` | Abrir sessão de votação |
+| 3 | `POST` | `/v1/pautas/{pautaId}/votos` | Registrar voto |
+| 4 | `GET` | `/v1/pautas/{pautaId}/resultado` | Obter resultado da votação |
 
-### 03) Receber votos
-- **POST** `/pautas/{pautaId}/votos`
-- body: `associadoId`, `voto` (“Sim”/“Não”)
-- comportamento:
-   - resolve sessão ativa da pauta
-   - insere voto com `sessao_votacao_id`
-   - se já votou → retorna “conflito”
-
-### 04) Resultado da votação
-- **GET** `/pautas/{pautaId}/resultado`
-- retorna: `simCount`, `naoCount`, `total`, `status (aberta/encerrada)`
-- implementação: query `GROUP BY voto` ou contagens filtradas por sessão ativa.
+Documentação interativa completa em: http://localhost:8080/swagger-ui.html
 
 ---
 
-## Banco de dados 
-   ### Tabelas:
-     - **pauta**
-     - **sessao_votacao**       
-     - **associado**
-     - **voto**
-   ### Constraints(criadas para evitar over engineering e garantir invariantes)
-     * UNIQUE (pauta_id, associado_id) em voto === garante “vota 1 vez por pauta”.
-     * CHECK (voto IN ('Sim','Não')).
-     * FK entre voto.sessao_votacao_id e sessao_votacao.id.
-   ### Trigger 
-     - Visando impedir insert se a sessão já estiver encerrada (`encerrada_em` ou `now() >= fecha_abertura`).
-     - Visando impedir que ocorra o mismatch de `voto.pauta_id` com `sessao_votacao.pauta_id`.
-   ### Índices
-   - `voto(pauta_id, associado_id)` → nesse caso criado pela instrução UNIQUE
-   - `voto(sessao_votacao_id)` → para a contagem rápida por sessão
-   - `sessao_votacao(pauta_id, tempo_abertura)` → para as consultas de sessão ativa
-   ### Persistência e Migrações
-   - Persistência via PostgreSQL por ter alguma familiaridade
-   - Versionamento realizado com **Flyway** para facilitar versionamanto e manutenções futuras
-   - Nada em memória → tudo reconstituído do banco de dados
----
-##  Nuvem
-  - Containerização da API com Docker criada
-  - Banco Postgres passaria a ser gerenciado em qualquer Cloud Provider
-  - Criação de variáveis de ambiente para credenciais/config
-  - Adicionados parâmetros de health checks, readiness and liveness
-  - Logs estruturados usando Micrometer registry prometheus para posterior monitoramento
+## Banco de dados
 
-## Decisões arquiteturais tomadas para o contexto
-1)  No meu entendimento o fato de termos um cache como Redis não faz muito sentido, pois o banco de dados
-PostgreSQL com índices aguenta dezenas de milhares de leituras/segundo sem Redis.
-2) Versionamento da API sera feito via URL.
-3) Uso de record para imutabilidade dos dados, eliminação de boilerplate
+### Tabelas
+- `pauta` — agenda de votação
+- `sessao_votacao` — período de abertura de uma pauta
+- `associado` — membro que pode votar
+- `voto` — registro de voto de um associado em uma pauta
+
+### Constraints
+- `UNIQUE (pauta_id, associado_id)` em `voto` — garante um voto por associado por pauta
+- `CHECK (voto IN ('Sim','Não'))` — restrição de valores válidos
+- FK entre `voto.sessao_votacao_id` e `sessao_votacao.id`
+
+### Índices
+- `voto(pauta_id, associado_id)` — criado pela constraint UNIQUE
+- `voto(sessao_votacao_id)` — contagem rápida por sessão
+- `sessao_votacao(pauta_id, tempo_abertura)` — consulta de sessão ativa
+
+### Migrations
+Versionamento com **Flyway** (`classpath:db/migration`). O schema é aplicado automaticamente na inicialização.
+
+---
+
+## Decisões arquiteturais
+
+1. **Sem cache Redis** — PostgreSQL com índices aguenta dezenas de milhares de leituras/segundo. Cache adicionaria complexidade operacional sem ganho justificável neste contexto.
+2. **Versionamento via URL** — `/v1/...` é simples, explícito e compatível com proxies e gateways sem configuração adicional.
+3. **DTOs com `record`** — imutabilidade, eliminação de boilerplate, serialização automática.
+4. **Kafka para resultado de sessão** — ao encerrar uma sessão, o resultado é publicado de forma assíncrona (post-commit via `TransactionSynchronization`) para desacoplar consumidores da operação de encerramento.
+5. **Threads virtuais (Project Loom)** — habilitadas via `spring.threads.virtual.enabled: true` para maior throughput em operações de I/O.
+6. **Scheduler de encerramento** — `SessaoVotacaoScheduler` roda a cada `SESSAO_VOTACAO_ENCERRAMENTO_DELAY_MS` ms verificando sessões expiradas, evitando estado inconsistente sem depender do cliente chamar o encerramento.
+
+---
+
+## Tarefas Bônus
+
+### Tarefa Bônus 01 — Integração de CPF
+Validar se o associado pode votar via API externa:
+```
+GET https://user-info.herokuapp.com/users/{cpf}
+→ { "status": "ABLE_TO_VOTE" | "UNABLE_TO_VOTE" }
+```
+
+### Tarefa Bônus 02 — Mensageria
+Resultado publicado em tópico Kafka (`votacao-resultado`) ao encerrar cada sessão.
+
+### Tarefa Bônus 03 — Performance
+Foram criados índices para aumento de eficiência e velocidade, threads virtuais e producer Kafka com batch/lz4 para suportar alto volume de votos simultâneos.
+Poderia realizar a separação do banco de dados com o de escrita CQRS ( se no futuro aumentasse exponencialmente o volume ) separando as lógicas distintas;
+Também poderia ser criado um load balancer na aplicação para garantir para resolver o balanceamento de carga em caso de necessidade de tasks de ECS ou POD
+
+### Tarefa Bônus 04 — Versionamento da API
+Estratégia via URL: `/v1/...` mas também poderia ser em dados de Header - campo version por exemplo

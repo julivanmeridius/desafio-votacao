@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import static br.com.company.votacao.constants.VotacaoConstants.PAUTA_NAO_ENCONTRADA;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
@@ -23,11 +24,12 @@ public class ResultadoService {
     @Transactional(readOnly = true)
     public ResultadoResponseDTO obter(Long pautaId) {
         if (!pautaRepository.existsById(pautaId)) {
-            throw new ResponseStatusException(NOT_FOUND, "Pauta não encontrada");
+            throw new ResponseStatusException(NOT_FOUND, PAUTA_NAO_ENCONTRADA);
         }
 
-        long simCount = votoRepository.countByPautaIdAndVoto(pautaId, "Sim");
-        long naoCount = votoRepository.countByPautaIdAndVoto(pautaId, "Não");
+        VotoRepository.ResultadoVotacaoProjection counts = votoRepository.countResultadoByPautaId(pautaId);
+        long simCount = counts.getSimCount();
+        long naoCount = counts.getNaoCount();
 
         var status = sessaoVotacaoRepository.findActivaByPautaId(pautaId).isPresent()
                 ? StatusSessao.ABERTA

@@ -12,9 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import static org.springframework.http.HttpStatus.CONFLICT;
-import static org.springframework.http.HttpStatus.NOT_FOUND;
-import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
+import static br.com.company.votacao.constants.VotacaoConstants.*;
+import static org.springframework.http.HttpStatus.*;
 
 @Service
 @RequiredArgsConstructor
@@ -29,17 +28,17 @@ public class VotoService {
     @Transactional
     public VotoResponseDTO votar(Long pautaId, VotoRequestDTO dto) {
         var pauta = pautaRepository.findById(pautaId)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Pauta não encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, PAUTA_NAO_ENCONTRADA));
 
         var sessaoVotacao = sessaoVotacaoRepository.findActivaByPautaId(pautaId)
-                .orElseThrow(() -> new ResponseStatusException(UNPROCESSABLE_ENTITY, "Nenhuma sessão ativa encontrada para esta pauta"));
+                .orElseThrow(() -> new ResponseStatusException(UNPROCESSABLE_CONTENT, SESSAO_ATIVA_NAO_ENCONTRADA));
 
         if (votoRepository.existsByPautaIdAndAssociadoId(pautaId, dto.associadoId())) {
-            throw new ResponseStatusException(CONFLICT, "Associado já votou nesta pauta");
+            throw new ResponseStatusException(CONFLICT, ASSOCIADO_JA_VOTOU);
         }
 
         var associado = associadoRepository.findById(dto.associadoId())
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Associado não encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, ASSOCIADO_NAO_ENCONTRADO));
 
         var voto = votoMapper.toEntity(pauta, sessaoVotacao, associado, dto);
         var saved = votoRepository.save(voto);

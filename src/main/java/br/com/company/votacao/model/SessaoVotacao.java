@@ -9,37 +9,48 @@ import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.OffsetDateTime;
 
+import static br.com.company.votacao.constants.VotacaoConstants.COLUMN_CRIADO_EM;
+import static br.com.company.votacao.constants.VotacaoConstants.COLUMN_DURACAO_SEGUNDOS;
+import static br.com.company.votacao.constants.VotacaoConstants.COLUMN_ENCERRADA_EM;
+import static br.com.company.votacao.constants.VotacaoConstants.COLUMN_FECHA_ABERTURA;
+import static br.com.company.votacao.constants.VotacaoConstants.COLUMN_ID;
+import static br.com.company.votacao.constants.VotacaoConstants.COLUMN_PAUTA_ID;
+import static br.com.company.votacao.constants.VotacaoConstants.COLUMN_TEMPO_ABERTURA;
+import static br.com.company.votacao.constants.VotacaoConstants.DEFAULT_NOW;
+import static br.com.company.votacao.constants.VotacaoConstants.DEFAULT_SESSAO_DURACAO_SEGUNDOS;
+import static br.com.company.votacao.constants.VotacaoConstants.TABLE_SESSAO_VOTACAO;
+
 @Getter
 @Setter
 @Entity
-@Table(name = "sessao_votacao")
+@Table(name = TABLE_SESSAO_VOTACAO)
 public class SessaoVotacao {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false)
+    @Column(name = COLUMN_ID, nullable = false)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @OnDelete(action = OnDeleteAction.CASCADE)
-    @JoinColumn(name = "pauta_id", nullable = false)
+    @JoinColumn(name = COLUMN_PAUTA_ID, nullable = false)
     private Pauta pauta;
 
-    @ColumnDefault("now()")
-    @Column(name = "tempo_abertura", nullable = false)
+    @ColumnDefault(DEFAULT_NOW)
+    @Column(name = COLUMN_TEMPO_ABERTURA, nullable = false)
     private OffsetDateTime tempoAbertura;
 
-    @ColumnDefault("60")
-    @Column(name = "duracao_segundos", nullable = false)
+    @ColumnDefault(DEFAULT_SESSAO_DURACAO_SEGUNDOS)
+    @Column(name = COLUMN_DURACAO_SEGUNDOS, nullable = false)
     private Long duracaoSegundos;
 
-    @Column(name = "fecha_abertura")
+    @Column(name = COLUMN_FECHA_ABERTURA)
     private OffsetDateTime fechaAbertura;
 
-    @Column(name = "encerrada_em")
+    @Column(name = COLUMN_ENCERRADA_EM)
     private OffsetDateTime encerradaEm;
 
-    @ColumnDefault("now()")
-    @Column(name = "criado_em", nullable = false)
+    @ColumnDefault(DEFAULT_NOW)
+    @Column(name = COLUMN_CRIADO_EM, nullable = false)
     private OffsetDateTime criadoEm;
 
 }
