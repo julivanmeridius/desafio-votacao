@@ -6,6 +6,8 @@ import br.com.company.votacao.mapper.SessaoVotacaoMapper;
 import br.com.company.votacao.repository.PautaRepository;
 import br.com.company.votacao.repository.SessaoVotacaoRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -23,6 +25,8 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @RequiredArgsConstructor
 public class SessaoVotacaoService {
 
+    private static final Logger log = LoggerFactory.getLogger(SessaoVotacaoService.class);
+
     private final SessaoVotacaoRepository sessaoVotacaoRepository;
     private final PautaRepository pautaRepository;
     private final SessaoVotacaoMapper sessaoVotacaoMapper;
@@ -35,6 +39,9 @@ public class SessaoVotacaoService {
 
         var sessaoVotacao = sessaoVotacaoMapper.toEntity(pauta, dto);
         var saved = sessaoVotacaoRepository.save(sessaoVotacao);
+
+        log.info("Sessao de votacao aberta - pautaId={}, sessaoId={}, duracaoSegundos={}, fechaAbertura={}",
+                pauta.getId(), saved.getId(), saved.getDuracaoSegundos(), saved.getFechaAbertura());
 
         return sessaoVotacaoMapper.toResponseDTO(saved);
     }
@@ -56,6 +63,9 @@ public class SessaoVotacaoService {
         }
 
         sessaoVotacaoRepository.saveAll(sessoesExpiradas);
+
+        log.info("Sessoes encerradas por expiracao - quantidade={}, pautaIds={}",
+                sessoesExpiradas.size(), pautaIdsEncerradas);
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override

@@ -8,6 +8,8 @@ import br.com.company.votacao.repository.PautaRepository;
 import br.com.company.votacao.repository.SessaoVotacaoRepository;
 import br.com.company.votacao.repository.VotoRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -18,6 +20,8 @@ import static org.springframework.http.HttpStatus.*;
 @Service
 @RequiredArgsConstructor
 public class VotoService {
+
+    private static final Logger log = LoggerFactory.getLogger(VotoService.class);
 
     private final PautaRepository pautaRepository;
     private final SessaoVotacaoRepository sessaoVotacaoRepository;
@@ -42,6 +46,9 @@ public class VotoService {
 
         var voto = votoMapper.toEntity(pauta, sessaoVotacao, associado, dto);
         var saved = votoRepository.save(voto);
+
+        log.info("Voto registrado - pautaId={}, associadoId={}, voto='{}', votoId={}",
+                pautaId, dto.associadoId(), dto.voto(), saved.getId());
 
         return votoMapper.toResponseDTO(saved);
     }

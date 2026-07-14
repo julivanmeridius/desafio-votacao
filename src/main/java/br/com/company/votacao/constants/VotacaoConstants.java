@@ -26,9 +26,6 @@ public final class VotacaoConstants {
     public static final String KAFKA_VOTACAO_TOPIC_PROPERTY = "${spring.kafka.votacao-topic}";
     public static final String SESSAO_ENCERRAMENTO_DELAY_PROPERTY = "${app.sessao-votacao.encerramento-delay-ms:5000}";
 
-    public static final String MSG_KAFKA_SUCESSO = "Mensagem enviada com sucesso para Topico: ";
-    public static final String MSG_KAFKA_ERRO = "Falha ao tentar enviar a mensagem para o Topico - Erro: ";
-
     public static final String RESULTADO_JSON_FORMAT = "{\"sim\":%d,\"nao\":%d,\"total\":%d,\"status\":\"%s\"}";
 
     public static final String API_PAUTAS_BASE_PATH = "/v1/pautas";

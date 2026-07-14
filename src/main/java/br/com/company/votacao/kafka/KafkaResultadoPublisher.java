@@ -1,17 +1,19 @@
 package br.com.company.votacao.kafka;
 
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import static br.com.company.votacao.constants.VotacaoConstants.KAFKA_VOTACAO_TOPIC_PROPERTY;
-import static br.com.company.votacao.constants.VotacaoConstants.MSG_KAFKA_ERRO;
-import static br.com.company.votacao.constants.VotacaoConstants.MSG_KAFKA_SUCESSO;
 
 @Service
 @RequiredArgsConstructor
 public class KafkaResultadoPublisher implements ResultadoPublisher {
+
+    private static final Logger log = LoggerFactory.getLogger(KafkaResultadoPublisher.class);
 
     private final KafkaTemplate<String, String> kafkaTemplate;
 
@@ -23,10 +25,11 @@ public class KafkaResultadoPublisher implements ResultadoPublisher {
         kafkaTemplate.send(topic, mensagem)
                 .whenComplete(((result, ex) -> {
                     if (ex == null) {
-                        System.out.println(MSG_KAFKA_SUCESSO +
-                                result.getRecordMetadata().offset());
+                        var metadata = result.getRecordMetadata();
+                        log.info("Resultado publicado em Kafka - topic={}, partition={}, offset={}",
+                                topic, metadata.partition(), metadata.offset());
                     } else {
-                        System.out.println(MSG_KAFKA_ERRO + ex.getMessage());
+                        log.error("Falha ao publicar em Kafka - topic={}", topic, ex);
                     }
                 }));
     }
