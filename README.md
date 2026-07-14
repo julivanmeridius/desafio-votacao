@@ -200,8 +200,62 @@ Documentação interativa completa em: http://localhost:8080/swagger-ui.html
 - `voto(sessao_votacao_id)` — contagem rápida por sessão
 - `sessao_votacao(pauta_id, tempo_abertura)` — consulta de sessão ativa
 
-### Migrations
-Versionamento com **Flyway** (`classpath:db/migration`). O schema é aplicado automaticamente na inicialização.
+### Migrations com Flyway
+
+Todo o versionamento de schema fica em `src/main/resources/db/migration/`. Ao subir a aplicação, o Flyway compara o conteúdo dessa pasta com a tabela `flyway_schema_history` no banco e aplica automaticamente o que ainda não rodou.
+
+**Estrutura:**
+
+```
+src/main/resources/db/
+├── migration/
+│   └── V1__create_schema.sql    ← aplicado pelo Flyway na inicialização
+└── seed/
+    └── dev-seed.sql             ← dados de exemplo, uso manual em dev
+```
+
+**Convenção de nomes:** `V<N>__<descricao_com_underscores>.sql`, com `N` crescente.
+- ✅ `V2__adiciona_indice_voto_recebido_em.sql`
+- ❌ `V2.sql`, `add-index.sql`, `V2_add_index.sql` (falta o duplo underscore)
+
+**Como adicionar uma nova migration:**
+1. Crie `V<próximo_número>__descricao.sql` em `db/migration/`
+2. Suba a aplicação — o Flyway aplica automaticamente
+3. Commite o arquivo
+
+**Regras importantes:**
+- ⚠️ **Nunca editar uma migration que já foi aplicada** em algum ambiente. `validate-on-migrate: true` recalcula o checksum a cada boot; qualquer alteração no conteúdo trava a inicialização.
+- Para reverter algo, crie **uma nova migration** (`V<N+1>__revert_....sql`). Não existe rollback automático.
+- Em produção, `clean-disabled: true` impede `flyway clean` acidental.
+- `baseline-on-migrate: false` — o banco deve estar vazio na primeira execução (ou ter o histórico do Flyway já populado).
+
+**Configurações relevantes** (`application.yaml`):
+
+| Propriedade | Valor | Efeito |
+|---|---|---|
+| `spring.flyway.enabled` | `true` | Habilita o Flyway |
+| `spring.flyway.locations` | `classpath:db/migration` | Onde procurar migrations |
+| `spring.flyway.validate-on-migrate` | `true` | Confere checksums antes de aplicar |
+| `spring.flyway.baseline-on-migrate` | `false` | Não cria baseline automático em bancos existentes |
+| `spring.flyway.clean-disabled` | `true` (prod) | Bloqueia `flyway clean` |
+
+### Seed de desenvolvimento
+
+`src/main/resources/db/seed/dev-seed.sql` contém dados de exemplo (2 pautas, 3 associados, 2 sessões abertas e 3 votos). **Não é executado pelo Flyway** — é uso manual, apenas em ambiente local, para testar rapidamente via Swagger.
+
+Para carregar (com a infra de docker-compose no ar):
+
+```bash
+docker exec -i votacao-postgres psql -U postgres -d votacao \
+  < src/main/resources/db/seed/dev-seed.sql
+```
+
+Ou via `psql` local:
+
+```bash
+psql -h localhost -U postgres -d votacao \
+  -f src/main/resources/db/seed/dev-seed.sql
+```
 
 ---
 
@@ -224,6 +278,7 @@ Validar se o associado pode votar via API externa:
 GET https://user-info.herokuapp.com/users/{cpf}
 → { "status": "ABLE_TO_VOTE" | "UNABLE_TO_VOTE" }
 ```
+Não foi implementado mas faria com Spring WebFlux com Circuit Breaker, Retry
 
 ### Tarefa Bônus 02 — Mensageria
 Resultado publicado em tópico Kafka (`votacao-resultado`) ao encerrar cada sessão.
